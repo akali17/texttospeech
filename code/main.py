@@ -175,22 +175,12 @@ class PDFTranslatorApp(QWidget):
         # Timeline control
         time_layout = QHBoxLayout()
         
-        # Current time label
-        self.current_time_label = QLabel("00:00", self)
-        self.current_time_label.setObjectName("TimeLabel")
-        
         # Progress slider
         self.progress_slider = QSlider(Qt.Horizontal)
         self.progress_slider.setRange(0, 100)
         self.progress_slider.sliderMoved.connect(self.set_position)
-        
-        # Total time label
-        self.total_time_label = QLabel("00:00", self)
-        self.total_time_label.setObjectName("TimeLabel")
-        
-        time_layout.addWidget(self.current_time_label)
+
         time_layout.addWidget(self.progress_slider)
-        time_layout.addWidget(self.total_time_label)
 
         # Connect signal from player
         self.player.positionChanged.connect(self.update_position)
