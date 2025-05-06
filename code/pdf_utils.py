@@ -1,36 +1,46 @@
 import fitz  # PyMuPDF
 import pytesseract
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image
 import io
+import cv2
+import numpy as np
 
 def extract_text_from_pdf(file_path):
     text = ""
-    try:
-        with fitz.open(file_path) as doc:
-            for page_num in range(len(doc)):
-                page = doc.load_page(page_num)
-                page_text = page.get_text()
-                if page_text.strip():
-                    text += page_text + "\n"
-                else:
-                    # OCR nâng cao nếu không trích xuất được text
-                    zoom_x = 3.0
-                    zoom_y = 3.0
-                    matrix = fitz.Matrix(zoom_x, zoom_y)
-                    pix = page.get_pixmap(matrix=matrix)
+    with fitz.open(file_path) as doc:
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            page_text = page.get_text()
+            if page_text.strip():
+                text += page_text + "\n"
+            else:
+                # Tăng độ phân giải ảnh
+                zoom_x = 3.0
+                zoom_y = 3.0
+                matrix = fitz.Matrix(zoom_x, zoom_y)
+                pix = page.get_pixmap(matrix=matrix)
 
-                    img_data = pix.tobytes("ppm")
-                    image = Image.open(io.BytesIO(img_data)).convert("L")
+                # Chuyển thành mảng NumPy để xử lý với OpenCV
+                img_data = pix.tobytes("ppm")
+                pil_img = Image.open(io.BytesIO(img_data)).convert("L")
+                np_img = np.array(pil_img)
 
-                    # Tiền xử lý ảnh
-                    image = image.filter(ImageFilter.MedianFilter())
-                    enhancer = ImageEnhance.Contrast(image)
-                    image = enhancer.enhance(2)
-                    image = image.point(lambda x: 0 if x < 128 else 255, '1')
+                # Làm mịn và tăng độ tương phản với adaptive threshold
+                blurred = cv2.GaussianBlur(np_img, (5, 5), 0)
+                thresh = cv2.adaptiveThreshold(
+                    blurred, 255,
+                    cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                    cv2.THRESH_BINARY,
+                    11, 2
+                )
 
-                    custom_config = r'--oem 3 --psm 4'
-                    ocr_text = pytesseract.image_to_string(image, lang='eng+vie', config=custom_config)
-                    text += ocr_text + "\n"
-    except Exception as e:
-        print(f"Lỗi đọc file PDF: {str(e)}")
-    return text.strip() if text else "Không trích xuất được text từ file PDF"
+                # Chuyển lại sang PIL để OCR
+                processed_image = Image.fromarray(thresh)
+
+                # Cấu hình OCR
+                custom_config = r'--oem 3 --psm 4'  # layout theo đoạn văn
+                ocr_text = pytesseract.image_to_string(
+                    processed_image, lang='eng+vie', config=custom_config
+                )
+                text += ocr_text + "\n"
+    return text.strip()
