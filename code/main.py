@@ -278,7 +278,8 @@ class PDFTranslatorApp(QWidget):
             self.en_button.setStyleSheet("")
 
     def open_pdf(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Chọn file PDF", "", "PDF files (*.pdf)")
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+        file_path, _ = QFileDialog.getOpenFileName(self, "Chọn file PDF", desktop_path, "PDF files (*.pdf)")
         if file_path:
             self.load_pdf(file_path)
 
